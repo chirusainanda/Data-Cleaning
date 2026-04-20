@@ -1,0 +1,421 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/chirusainanda/Data-Cleaning/blob/main/task-6\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import sqlite3\n",
+        "import pandas as pd\n",
+        "\n",
+        "# Create database connection\n",
+        "conn = sqlite3.connect('sales_data.db')\n",
+        "\n",
+        "# Create cursor\n",
+        "cursor = conn.cursor()"
+      ],
+      "metadata": {
+        "id": "8x3s4cqOO9-i"
+      },
+      "execution_count": 1,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "cursor.execute(\"\"\"\n",
+        "CREATE TABLE online_sales (\n",
+        "    order_id INTEGER,\n",
+        "    order_date DATE,\n",
+        "    amount REAL,\n",
+        "    product_id INTEGER\n",
+        ")\n",
+        "\"\"\")\n",
+        "\n",
+        "conn.commit()"
+      ],
+      "metadata": {
+        "id": "8dueT53YSl2h"
+      },
+      "execution_count": 2,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "cursor.executemany(\"\"\"\n",
+        "INSERT INTO online_sales (order_id, order_date, amount, product_id)\n",
+        "VALUES (?, ?, ?, ?)\n",
+        "\"\"\", [\n",
+        "    (1, '2024-01-05', 500, 101),\n",
+        "    (2, '2024-01-10', 700, 102),\n",
+        "    (3, '2024-02-15', 300, 103),\n",
+        "    (4, '2024-02-20', 450, 104),\n",
+        "    (5, '2024-03-08', 800, 105),\n",
+        "    (6, '2024-03-15', 650, 106),\n",
+        "    (7, '2024-04-10', 900, 107),\n",
+        "    (8, '2024-04-22', 400, 108),\n",
+        "    (9, '2024-05-05', 1000, 109),\n",
+        "    (10, '2024-05-18', 750, 110)\n",
+        "])\n",
+        "\n",
+        "conn.commit()"
+      ],
+      "metadata": {
+        "id": "R6ToPHW-SqVk"
+      },
+      "execution_count": 3,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df = pd.read_sql_query(\"SELECT * FROM online_sales\", conn)\n",
+        "print(df)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 0
+        },
+        "id": "n92X_J2WSuMJ",
+        "outputId": "95be9f7a-e65d-4e0c-8901-54d5b2d9c394"
+      },
+      "execution_count": 4,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "   order_id  order_date  amount  product_id\n",
+            "0         1  2024-01-05   500.0         101\n",
+            "1         2  2024-01-10   700.0         102\n",
+            "2         3  2024-02-15   300.0         103\n",
+            "3         4  2024-02-20   450.0         104\n",
+            "4         5  2024-03-08   800.0         105\n",
+            "5         6  2024-03-15   650.0         106\n",
+            "6         7  2024-04-10   900.0         107\n",
+            "7         8  2024-04-22   400.0         108\n",
+            "8         9  2024-05-05  1000.0         109\n",
+            "9        10  2024-05-18   750.0         110\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "query = \"\"\"\n",
+        "SELECT\n",
+        "    strftime('%Y', order_date) AS Year,\n",
+        "    strftime('%m', order_date) AS Month,\n",
+        "    SUM(amount) AS Total_Revenue,\n",
+        "    COUNT(DISTINCT order_id) AS Total_Orders\n",
+        "FROM online_sales\n",
+        "GROUP BY Year, Month\n",
+        "ORDER BY Year, Month\n",
+        "\"\"\"\n",
+        "\n",
+        "sales_analysis = pd.read_sql_query(query, conn)\n",
+        "print(sales_analysis)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 0
+        },
+        "id": "PXjNCotXSx3I",
+        "outputId": "507ee5d8-f237-4274-c5f3-038c93239c5a"
+      },
+      "execution_count": 5,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "   Year Month  Total_Revenue  Total_Orders\n",
+            "0  2024    01         1200.0             2\n",
+            "1  2024    02          750.0             2\n",
+            "2  2024    03         1450.0             2\n",
+            "3  2024    04         1300.0             2\n",
+            "4  2024    05         1750.0             2\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "top_months_query = \"\"\"\n",
+        "SELECT\n",
+        "    strftime('%Y', order_date) AS Year,\n",
+        "    strftime('%m', order_date) AS Month,\n",
+        "    SUM(amount) AS Total_Revenue\n",
+        "FROM online_sales\n",
+        "GROUP BY Year, Month\n",
+        "ORDER BY Total_Revenue DESC\n",
+        "LIMIT 3\n",
+        "\"\"\"\n",
+        "\n",
+        "top_months = pd.read_sql_query(top_months_query, conn)\n",
+        "print(top_months)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 0
+        },
+        "id": "DTTz32QMS2II",
+        "outputId": "d1778e34-e84f-400f-fcc7-bd384911ce69"
+      },
+      "execution_count": 6,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "   Year Month  Total_Revenue\n",
+            "0  2024    05         1750.0\n",
+            "1  2024    03         1450.0\n",
+            "2  2024    04         1300.0\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "top_months_query = \"\"\"\n",
+        "SELECT\n",
+        "    strftime('%Y', order_date) AS Year,\n",
+        "    strftime('%m', order_date) AS Month,\n",
+        "    SUM(amount) AS Total_Revenue\n",
+        "FROM online_sales\n",
+        "GROUP BY Year, Month\n",
+        "ORDER BY Total_Revenue DESC\n",
+        "LIMIT 3\n",
+        "\"\"\"\n",
+        "\n",
+        "top_months = pd.read_sql_query(top_months_query, conn)\n",
+        "print(top_months)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 0
+        },
+        "id": "wvwE2B9gS6ob",
+        "outputId": "8e4aaec5-d4b8-4d75-fb79-7ee6d561be2d"
+      },
+      "execution_count": 7,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "   Year Month  Total_Revenue\n",
+            "0  2024    05         1750.0\n",
+            "1  2024    03         1450.0\n",
+            "2  2024    04         1300.0\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "sales_analysis.to_csv(\"sales_analysis.csv\", index=False)\n",
+        "top_months.to_csv(\"top_sales_months.csv\", index=False)\n",
+        "\n",
+        "print(\"CSV files saved successfully\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 0
+        },
+        "id": "47K848KtTFtt",
+        "outputId": "bb2d0265-065a-481e-8e28-457328787a23"
+      },
+      "execution_count": 8,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "CSV files saved successfully\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from google.colab import files\n",
+        "\n",
+        "files.download('sales_analysis.csv')\n",
+        "files.download('top_sales_months.csv')"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 17
+        },
+        "id": "Ve9b4mwiTJb2",
+        "outputId": "fb547706-caa9-4eca-d52a-797333aba663"
+      },
+      "execution_count": 9,
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "<IPython.core.display.Javascript object>"
+            ],
+            "application/javascript": [
+              "\n",
+              "    async function download(id, filename, size) {\n",
+              "      if (!google.colab.kernel.accessAllowed) {\n",
+              "        return;\n",
+              "      }\n",
+              "      const div = document.createElement('div');\n",
+              "      const label = document.createElement('label');\n",
+              "      label.textContent = `Downloading \"${filename}\": `;\n",
+              "      div.appendChild(label);\n",
+              "      const progress = document.createElement('progress');\n",
+              "      progress.max = size;\n",
+              "      div.appendChild(progress);\n",
+              "      document.body.appendChild(div);\n",
+              "\n",
+              "      const buffers = [];\n",
+              "      let downloaded = 0;\n",
+              "\n",
+              "      const channel = await google.colab.kernel.comms.open(id);\n",
+              "      // Send a message to notify the kernel that we're ready.\n",
+              "      channel.send({})\n",
+              "\n",
+              "      for await (const message of channel.messages) {\n",
+              "        // Send a message to notify the kernel that we're ready.\n",
+              "        channel.send({})\n",
+              "        if (message.buffers) {\n",
+              "          for (const buffer of message.buffers) {\n",
+              "            buffers.push(buffer);\n",
+              "            downloaded += buffer.byteLength;\n",
+              "            progress.value = downloaded;\n",
+              "          }\n",
+              "        }\n",
+              "      }\n",
+              "      const blob = new Blob(buffers, {type: 'application/binary'});\n",
+              "      const a = document.createElement('a');\n",
+              "      a.href = window.URL.createObjectURL(blob);\n",
+              "      a.download = filename;\n",
+              "      div.appendChild(a);\n",
+              "      a.click();\n",
+              "      div.remove();\n",
+              "    }\n",
+              "  "
+            ]
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "<IPython.core.display.Javascript object>"
+            ],
+            "application/javascript": [
+              "download(\"download_081fc0ac-3d06-4a5e-97a9-03bb48d1e301\", \"sales_analysis.csv\", 122)"
+            ]
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "<IPython.core.display.Javascript object>"
+            ],
+            "application/javascript": [
+              "\n",
+              "    async function download(id, filename, size) {\n",
+              "      if (!google.colab.kernel.accessAllowed) {\n",
+              "        return;\n",
+              "      }\n",
+              "      const div = document.createElement('div');\n",
+              "      const label = document.createElement('label');\n",
+              "      label.textContent = `Downloading \"${filename}\": `;\n",
+              "      div.appendChild(label);\n",
+              "      const progress = document.createElement('progress');\n",
+              "      progress.max = size;\n",
+              "      div.appendChild(progress);\n",
+              "      document.body.appendChild(div);\n",
+              "\n",
+              "      const buffers = [];\n",
+              "      let downloaded = 0;\n",
+              "\n",
+              "      const channel = await google.colab.kernel.comms.open(id);\n",
+              "      // Send a message to notify the kernel that we're ready.\n",
+              "      channel.send({})\n",
+              "\n",
+              "      for await (const message of channel.messages) {\n",
+              "        // Send a message to notify the kernel that we're ready.\n",
+              "        channel.send({})\n",
+              "        if (message.buffers) {\n",
+              "          for (const buffer of message.buffers) {\n",
+              "            buffers.push(buffer);\n",
+              "            downloaded += buffer.byteLength;\n",
+              "            progress.value = downloaded;\n",
+              "          }\n",
+              "        }\n",
+              "      }\n",
+              "      const blob = new Blob(buffers, {type: 'application/binary'});\n",
+              "      const a = document.createElement('a');\n",
+              "      a.href = window.URL.createObjectURL(blob);\n",
+              "      a.download = filename;\n",
+              "      div.appendChild(a);\n",
+              "      a.click();\n",
+              "      div.remove();\n",
+              "    }\n",
+              "  "
+            ]
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "<IPython.core.display.Javascript object>"
+            ],
+            "application/javascript": [
+              "download(\"download_0c9090b2-3a1b-4471-b024-91374ca72efc\", \"top_sales_months.csv\", 70)"
+            ]
+          },
+          "metadata": {}
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "colab": {
+      "name": "Welcome To Colab",
+      "provenance": [],
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "display_name": "Python 3",
+      "name": "python3"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 0
+}
